@@ -20,7 +20,7 @@ class TestUseCase5(unittest.TestCase):
         self.conn.close()
 
     def test_run_uc5_output(self):
-        expected_output = "Assignment: User 2 to Person 5\n"
+        expected_output = "Assigned bernd.mueller to access Olaf Gemein"
         captured_output = StringIO()
         sys.stdout = captured_output
         run_uc5(self.conn)

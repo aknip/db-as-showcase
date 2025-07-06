@@ -20,7 +20,7 @@ class TestUseCase4(unittest.TestCase):
         self.conn.close()
 
     def test_run_uc4_output(self):
-        expected_output = "Added Note: New Note Content\n"
+        expected_output = "Added Note by bernd.mueller for Karl Offen: New note created by Bernd for Karl"
         captured_output = StringIO()
         sys.stdout = captured_output
         run_uc4(self.conn)

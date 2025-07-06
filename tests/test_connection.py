@@ -22,9 +22,9 @@ class TestDatabaseConnection(unittest.TestCase):
         """Test that a basic SELECT query works."""
         conn = get_connection(":memory:")
         cursor = conn.cursor()
-        cursor.execute("SELECT 1")
+        cursor.execute("SELECT 1 AS value")
         result = cursor.fetchone()
-        self.assertEqual(result, (1,))
+        self.assertEqual(result['value'], 1)
         conn.close()
 
 

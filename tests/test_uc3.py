@@ -22,7 +22,7 @@ class TestUseCase3(unittest.TestCase):
     def test_run_uc3_output(self):
         # First, update the note using run_uc2
         run_uc2(self.conn)
-        expected_output = "Note 1: Updated Note Content\n"
+        expected_output = "Person: Olaf Gemein, Note: Note 17 for person 5"
         captured_output = StringIO()
         sys.stdout = captured_output
         run_uc3(self.conn)

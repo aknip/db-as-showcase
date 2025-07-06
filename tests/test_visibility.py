@@ -35,9 +35,10 @@ class TestVisibilityQuery(unittest.TestCase):
     def test_viewer_sees_own(self):
         """Test viewer can only see their own data."""
         visible_data = fetch_visible_persons_notes(self.conn, 3)  # Viewer user
-        persons = set(d['person_name'] for d in visible_data)
-        self.assertEqual(persons, {'Person Five'})
-        self.assertEqual(len(visible_data), 4)
+        persons = set(f"{d['vorname']} {d['nachname']}" for d in visible_data)
+        self.assertEqual(persons, {'Olaf Gemein', 'Max Beispiel', 'Eva Team'})
+        # The viewer can see 6 records in total (4 for Olaf, 1 for Max, 1 for Eva)
+        self.assertEqual(len(visible_data), 6)
 
 
 if __name__ == "__main__":

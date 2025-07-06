@@ -33,17 +33,17 @@ class TestEdgeCases(unittest.TestCase):
         # Insert a person without any notes
         cursor = self.conn.cursor()
         cursor.execute(
-            "INSERT INTO user (name, role) VALUES (?, ?)",
+            "INSERT INTO user (username, role) VALUES (?, ?)",
             ("testuser", Role.VIEWER.value)
         )
         user_id = cursor.lastrowid
         
         cursor.execute(
             """
-            INSERT INTO person (name, created_by)
-            VALUES (?, ?)
+            INSERT INTO person (vorname, nachname, email, telefon, created_by)
+            VALUES (?, ?, ?, ?, ?)
             """,
-            ("No Notes", user_id)
+            ("No", "Notes", "no.notes@example.com", "+49123456789", user_id)
         )
         person_id = cursor.lastrowid
         self.conn.commit()

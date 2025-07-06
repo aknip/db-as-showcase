@@ -20,7 +20,7 @@ class TestUseCase2(unittest.TestCase):
         self.conn.close()
 
     def test_run_uc2_output(self):
-        expected_output = "Updated Note 1: Updated Note Content\n"
+        expected_output = "Updated Note 5 by anna.schmitt: Note 5 for person 2"
         captured_output = StringIO()
         sys.stdout = captured_output
         run_uc2(self.conn)

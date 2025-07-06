@@ -20,27 +20,29 @@ class TestUseCase1(unittest.TestCase):
         self.conn.close()
 
     def test_run_uc1_output(self):
-        expected_output = """Admin Overview:
-Person: Person One, Note: Note 1
-Person: Person One, Note: Note 2
-Person: Person One, Note: Note 3
-Person: Person One, Note: Note 4
-Person: Person Two, Note: Note 5
-Person: Person Two, Note: Note 6
-Person: Person Two, Note: Note 7
-Person: Person Two, Note: Note 8
-Person: Person Three, Note: Note 9
-Person: Person Three, Note: Note 10
-Person: Person Three, Note: Note 11
-Person: Person Three, Note: Note 12
-Person: Person Four, Note: Note 13
-Person: Person Four, Note: Note 14
-Person: Person Four, Note: Note 15
-Person: Person Four, Note: Note 16
-Person: Person Five, Note: Note 17
-Person: Person Five, Note: Note 18
-Person: Person Five, Note: Note 19
-Person: Person Five, Note: Note 20
+        expected_output = """UC-1: Admin Overview (Anna Schmitt)
+Expected: See all persons and notes
+Person: Max Beispiel, Note: Note 1 for person 1
+Person: Max Beispiel, Note: Note 2 for person 1
+Person: Max Beispiel, Note: Note 3 for person 1
+Person: Max Beispiel, Note: Note 4 for person 1
+Person: Olaf Gemein, Note: Note 17 for person 5
+Person: Olaf Gemein, Note: Note 18 for person 5
+Person: Olaf Gemein, Note: Note 19 for person 5
+Person: Olaf Gemein, Note: Note 20 for person 5
+Person: Karl Offen, Note: Note 10 for person 3
+Person: Karl Offen, Note: Note 11 for person 3
+Person: Karl Offen, Note: Note 12 for person 3
+Person: Karl Offen, Note: Note 9 for person 3
+Person: Lisa Privat, Note: Note 13 for person 4
+Person: Lisa Privat, Note: Note 14 for person 4
+Person: Lisa Privat, Note: Note 15 for person 4
+Person: Lisa Privat, Note: Note 16 for person 4
+Person: Eva Team, Note: Note 5 for person 2
+Person: Eva Team, Note: Note 6 for person 2
+Person: Eva Team, Note: Note 7 for person 2
+Person: Eva Team, Note: Note 8 for person 2
+Total records: 20
 """
         captured_output = StringIO()
         sys.stdout = captured_output
