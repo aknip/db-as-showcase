@@ -96,7 +96,7 @@ Constraints:
 
 Return both the code and the tests.
 
-Prompt 02 – Table Schema
+Prompt 02 – Table Schema: Completed
 
 Building on demo_db.py from Prompt 01:
 
