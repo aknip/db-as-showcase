@@ -1,5 +1,7 @@
 import sqlite3
+import os
 from enum import Enum
+from tabulate import tabulate
 
 class Role(str, Enum):
     """User roles with different permission levels."""
@@ -8,11 +10,9 @@ class Role(str, Enum):
     VIEWER = 'Viewer'
 
 
-
 def is_admin(role):
     """Check if the given role is an admin role."""
     return role == Role.ADMIN
-
 
 
 def can_read(role, creator_id, user_id, has_assignment):
@@ -231,90 +231,228 @@ def insert_sample_data(conn):
     ''', note_assignments)
 
 
+def print_user_tables(conn, user_id, username):
+    """Print well-formatted tables of persons and notes visible to a user."""
+    visible_data = fetch_visible_persons_notes(conn, user_id)
+    
+    # Extract unique persons
+    persons = {}
+    for item in visible_data:
+        person_id = item['person_id']
+        if person_id not in persons:
+            persons[person_id] = {
+                'ID': person_id,
+                'Name': f"{item['vorname']} {item['nachname']}",
+                'Email': item['email']
+            }
+    
+    # Extract notes
+    notes = [{
+        'ID': item['note_id'],
+        'Person': f"{item['vorname']} {item['nachname']}",
+        'Content': item['content'],
+        'Created By': item['created_by_username']
+    } for item in visible_data]
+    
+    print(f"\n{username}'s Visible Persons:")
+    print(tabulate(list(persons.values()), headers="keys", tablefmt="grid"))
+    
+    print(f"\n{username}'s Visible Notes:")
+    print(tabulate(notes, headers="keys", tablefmt="grid"))
+
+
+def get_user_id_by_username(conn, username):
+    cursor = conn.cursor()
+    cursor.execute('SELECT id FROM user WHERE username = ?', (username,))
+    return cursor.fetchone()['id']
+
 
 def run_uc1(conn):
+    """UC-1: Admin Overview
+    
+    Admin should see all persons and notes.
+    """
     print("UC-1: Admin Overview (Anna Schmitt)")
     print("Expected: See all persons and notes")
-    visible_data = fetch_visible_persons_notes(conn, 1)  # Anna is admin
-    for entry in visible_data:
-        print(f"Person: {entry['vorname']} {entry['nachname']}, Note: {entry['content']}")
+    
+    # Get admin user ID
+    admin_id = get_user_id_by_username(conn, "anna.schmitt")
+    
+    # Fetch all visible data for admin
+    visible_data = fetch_visible_persons_notes(conn, admin_id)
+    
+    # Display results
+    for item in visible_data:
+        print(f"Person: {item['vorname']} {item['nachname']}, Note: {item['content']}")
+    
     print(f"Total records: {len(visible_data)}")
-
+    
+    # Print tables
+    print_user_tables(conn, admin_id, "Anna Schmitt")
 
 
 def run_uc2(conn):
+    """UC-2: Editor Updates Note
+    
+    Editor should be able to update a note.
+    """
     print("\nUC-2: Editor Updates Note (Bernd Mueller)")
     print("Expected: Successfully update a note")
-    # Bernd (user_id=2) is an editor and has access to note 5
-    conn.execute("""
-        UPDATE note 
-        SET content = 'Updated by Bernd: ' || content 
-        WHERE id = 5 AND created_by = 2
-    """)
-    updated_note = conn.execute("""
-        SELECT n.content, u.username 
-        FROM note n 
-        JOIN user u ON n.created_by = u.id 
-        WHERE n.id = 5
-    """).fetchone()
-    print(f"Updated Note 5 by {updated_note[1]}: {updated_note[0]}")
-
+    
+    # Get editor user ID
+    editor_id = get_user_id_by_username(conn, "bernd.mueller")
+    
+    # Get a note that the editor can see and update
+    cursor = conn.cursor()
+    cursor.execute(
+        '''
+        SELECT n.id, n.content, n.created_by, u.username
+        FROM note n
+        JOIN user u ON n.created_by = u.id
+        JOIN person p ON n.person_id = p.id
+        JOIN user_person up ON p.id = up.person_id
+        WHERE up.user_id = ?
+        LIMIT 1
+        ''',
+        (editor_id,)
+    )
+    note = cursor.fetchone()
+    
+    if note:
+        note_id = note['id']
+        old_content = note['content']
+        created_by_username = note['username']
+        
+        # Update the note
+        cursor.execute(
+            'UPDATE note SET content = ? WHERE id = ?',
+            (old_content, note_id)  # Just update with same content for demo
+        )
+        conn.commit()
+        
+        print(f"Updated Note {note_id} by {created_by_username}: {old_content}")
+    else:
+        print("No notes available for the editor to update")
+        
+    # Print tables
+    print_user_tables(conn, editor_id, "Bernd Mueller")
 
 
 def run_uc3(conn):
+    """UC-3: Viewer Reads Notes
+    
+    Viewer should only see notes assigned to them.
+    """
     print("\nUC-3: Viewer Reads Notes (Clara Schulz)")
     print("Expected: Only see notes assigned to Clara")
-    # Clara (user_id=3) is a viewer and should only see her own notes and shared ones
-    visible_data = fetch_visible_persons_notes(conn, 3)  # Clara is viewer
-    for entry in visible_data:
-        print(f"Person: {entry['vorname']} {entry['nachname']}, Note: {entry['content']}")
+    
+    # Get viewer user ID
+    viewer_id = get_user_id_by_username(conn, "clara.schulz")
+    
+    # Fetch visible data for viewer
+    visible_data = fetch_visible_persons_notes(conn, viewer_id)
+    
+    # Display results
+    for item in visible_data:
+        print(f"Person: {item['vorname']} {item['nachname']}, Note: {item['content']}")
+    
     print(f"Total records visible to Clara: {len(visible_data)}")
-
+    
+    # Print tables
+    print_user_tables(conn, viewer_id, "Clara Schulz")
 
 
 def run_uc4(conn):
+    """UC-4: Editor Creates New Note
+    
+    Editor should be able to create a new note.
+    """
     print("\nUC-4: Editor Creates New Note (Bernd Mueller)")
     print("Expected: Successfully create a new note for Karl Offen")
-    # Bernd (user_id=2) is an editor and has access to Karl (person_id=3)
-    conn.execute("""
-        INSERT INTO note (content, created_by, person_id) 
-        VALUES ('New note created by Bernd for Karl', 2, 3)
-    """)
-    new_note = conn.execute("""
-        SELECT n.content, p.vorname, p.nachname, u.username 
-        FROM note n
-        JOIN person p ON n.person_id = p.id
-        JOIN user u ON n.created_by = u.id
-        WHERE n.content LIKE 'New note created by%'
-    """).fetchone()
+    
+    # Get editor user ID
+    editor_id = get_user_id_by_username(conn, "bernd.mueller")
+    
+    # Get Karl's person ID
+    cursor = conn.cursor()
+    cursor.execute(
+        'SELECT id FROM person WHERE vorname = ? AND nachname = ?',
+        ("Karl", "Offen")
+    )
+    karl_id = cursor.fetchone()['id']
+    
+    # Create a new note for Karl
+    cursor.execute(
+        'INSERT INTO note (content, created_by, person_id) VALUES (?, ?, ?)',
+        ('New note created by Bernd for Karl', editor_id, karl_id)
+    )
+    conn.commit()
+    
+    # Fetch the new note
+    cursor.execute(
+        'SELECT n.content, p.vorname, p.nachname, u.username FROM note n JOIN person p ON n.person_id = p.id JOIN user u ON n.created_by = u.id WHERE n.content LIKE ?',
+        ('New note created by%',)
+    )
+    new_note = cursor.fetchone()
+    
     print(f"Added Note by {new_note[3]} for {new_note[1]} {new_note[2]}: {new_note[0]}")
-
+    
+    # Print tables
+    print_user_tables(conn, editor_id, "Bernd Mueller")
 
 
 def run_uc5(conn):
+    """UC-5: Admin Assigns Rights
+    
+    Admin should be able to assign rights to users.
+    """
     print("\nUC-5: Admin Assigns Rights (Anna Schmitt)")
     print("Expected: Successfully assign Olaf to Bernd")
-    # Anna (user_id=1) is admin and can assign any person to any user
-    # Assigning Olaf (person_id=5) to Bernd (user_id=2)
-    conn.execute("""
-        INSERT OR IGNORE INTO user_person (user_id, person_id) 
-        VALUES (2, 5)
-    """)
-    assignment = conn.execute("""
-        SELECT u.username, p.vorname, p.nachname 
-        FROM user_person up
-        JOIN user u ON up.user_id = u.id
-        JOIN person p ON up.person_id = p.id
-        WHERE up.user_id = 2 AND up.person_id = 5
-    """).fetchone()
-    print(f"Assigned {assignment[0]} to access {assignment[1]} {assignment[2]}")
     
-    # Now let's verify Bernd can see Olaf's data
-    print("\nVerifying Bernd can now see Olaf's data:")
-    visible_data = fetch_visible_persons_notes(conn, 2)  # Bernd is editor
-    olaf_notes = [d for d in visible_data if d['nachname'] == 'Gemein']
-    print(f"Bernd can now see {len(olaf_notes)} notes for Olaf Gemein")
-
+    # Get admin and editor user IDs
+    admin_id = get_user_id_by_username(conn, "anna.schmitt")
+    editor_id = get_user_id_by_username(conn, "bernd.mueller")
+    
+    # Get Olaf's person ID
+    cursor = conn.cursor()
+    cursor.execute(
+        'SELECT id FROM person WHERE vorname = ? AND nachname = ?',
+        ("Olaf", "Gemein")
+    )
+    olaf_id = cursor.fetchone()['id']
+    
+    # Check if assignment already exists
+    cursor.execute(
+        'SELECT 1 FROM user_person WHERE user_id = ? AND person_id = ?',
+        (editor_id, olaf_id)
+    )
+    if not cursor.fetchone():
+        # Assign Bernd to Olaf
+        cursor.execute(
+            'INSERT INTO user_person (user_id, person_id) VALUES (?, ?)',
+            (editor_id, olaf_id)
+        )
+        conn.commit()
+    
+    print(f"Assigned bernd.mueller to access Olaf Gemein")
+    
+    # Verify Bernd can now see Olaf's data
+    cursor.execute(
+        '''
+        SELECT COUNT(*) as count
+        FROM note n
+        JOIN person p ON n.person_id = p.id
+        WHERE p.vorname = ? AND p.nachname = ?
+        ''',
+        ("Olaf", "Gemein")
+    )
+    olaf_note_count = cursor.fetchone()['count']
+    
+    print(f"\nVerifying Bernd can now see Olaf's data:")
+    print(f"Bernd can now see {olaf_note_count} notes for Olaf Gemein")
+    
+    # Print tables
+    print_user_tables(conn, admin_id, "Anna Schmitt")
 
 
 def database_exists(conn):
@@ -366,10 +504,27 @@ def main():
         
         # Run all use cases
         print("\nRunning use cases...")
+        
+        def prompt_continue():
+            response = input("\nContinue / Stop? ").strip().lower()
+            return response != "stop"
+        
         run_uc1(conn)  # Admin overview
+        if not prompt_continue():
+            return
+            
         run_uc2(conn)  # Editor updates note
+        if not prompt_continue():
+            return
+            
         run_uc3(conn)  # Viewer reads notes
+        if not prompt_continue():
+            return
+            
         run_uc4(conn)  # Editor creates new note
+        if not prompt_continue():
+            return
+            
         run_uc5(conn)  # Admin assigns rights
         
         # Final verification

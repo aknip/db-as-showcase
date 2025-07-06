@@ -1,7 +1,15 @@
 # db-as-showcase
 
 ## Project Goal
-The goal of this project is to demonstrate a database showcase using SQLite and Python. It involves creating a schema, inserting sample data, implementing role validation logic, and executing various use cases.
+The goal is to be able to display the five most important use cases in a small, sample database using DB queries. To do this, the five use cases must be defined with sample users and sample data.
+
+Database: Personal data, notes. Any number of notes can be attached to individuals.
+
+The database should be accessible to multiple users. Individuals and notes can optionally be viewed or modified by multiple users. 
+
+The access rules (“who can see what”) should also be mapped via the DB schema.
+
+For more details see [specs.md](specs.md).
 
 ## Installation & Execution
 1. Ensure Python 3.8 or higher is installed.
