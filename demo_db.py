@@ -1,5 +1,28 @@
 import sqlite3
 from pathlib import Path
+from enum import Enum
+
+class Role(str, Enum):
+    ADMIN = 'Admin'
+    EDITOR = 'Editor'
+    VIEWER = 'Viewer'
+
+def is_admin(role):
+    return role == Role.ADMIN
+
+def can_read(role, creator_id, user_id, has_assignment):
+    if role == Role.ADMIN:
+        return True
+    if role == Role.EDITOR or role == Role.VIEWER:
+        return creator_id == user_id or has_assignment
+    return False
+
+def can_write(role, creator_id, user_id):
+    if role == Role.ADMIN:
+        return True
+    if role == Role.EDITOR:
+        return creator_id == user_id
+    return False
 
 def get_connection(path="demo.sqlite"):
     conn = sqlite3.connect(path)

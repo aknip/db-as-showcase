@@ -106,7 +106,7 @@ Building on demo_db.py from Prompt 01:
 
 Ensure all existing tests still pass.
 
-Prompt 03 – Insert Sample Data
+Prompt 03 – Insert Sample Data: Completed
 
 Extend demo_db.py:
 
