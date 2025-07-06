@@ -9,6 +9,11 @@ The database should be accessible to multiple users. Individuals and notes can o
 
 The access rules (“who can see what”) should also be mapped via the DB schema.
 
+For example:
+- Admin (anna.schmitt) has access to all persons and notes
+- Some notes are visible to multiple users (e.g., Olaf Gemein's notes are visible to all three users)
+- After Usecase 5 runs, you can see that bernd.mueller now has access to Olaf Gemein's data
+
 For more details see [specs.md](specs.md).
 
 ## Installation & Execution

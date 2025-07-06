@@ -231,6 +231,85 @@ def insert_sample_data(conn):
     ''', note_assignments)
 
 
+def get_users_with_access(conn, entity_type, entity_id):
+    """Get a list of usernames who have access to a specific person or note."""
+    cursor = conn.cursor()
+    users = []
+    
+    if entity_type == 'person':
+        # Users who created the person
+        cursor.execute(
+            '''
+            SELECT DISTINCT u.username
+            FROM person p
+            JOIN user u ON p.created_by = u.id
+            WHERE p.id = ?
+            ''',
+            (entity_id,)
+        )
+        users.extend([row['username'] for row in cursor.fetchall()])
+        
+        # Users assigned to the person
+        cursor.execute(
+            '''
+            SELECT DISTINCT u.username
+            FROM user_person up
+            JOIN user u ON up.user_id = u.id
+            WHERE up.person_id = ?
+            ''',
+            (entity_id,)
+        )
+        users.extend([row['username'] for row in cursor.fetchall()])
+        
+        # Admin users always have access
+        cursor.execute("SELECT username FROM user WHERE role = 'Admin'")
+        users.extend([row['username'] for row in cursor.fetchall()])
+        
+    elif entity_type == 'note':
+        # Users who created the note
+        cursor.execute(
+            '''
+            SELECT DISTINCT u.username
+            FROM note n
+            JOIN user u ON n.created_by = u.id
+            WHERE n.id = ?
+            ''',
+            (entity_id,)
+        )
+        users.extend([row['username'] for row in cursor.fetchall()])
+        
+        # Users assigned to the note
+        cursor.execute(
+            '''
+            SELECT DISTINCT u.username
+            FROM note_assignment na
+            JOIN user u ON na.user_id = u.id
+            WHERE na.note_id = ?
+            ''',
+            (entity_id,)
+        )
+        users.extend([row['username'] for row in cursor.fetchall()])
+        
+        # Users assigned to the person of this note
+        cursor.execute(
+            '''
+            SELECT DISTINCT u.username
+            FROM note n
+            JOIN user_person up ON n.person_id = up.person_id
+            JOIN user u ON up.user_id = u.id
+            WHERE n.id = ?
+            ''',
+            (entity_id,)
+        )
+        users.extend([row['username'] for row in cursor.fetchall()])
+        
+        # Admin users always have access
+        cursor.execute("SELECT username FROM user WHERE role = 'Admin'")
+        users.extend([row['username'] for row in cursor.fetchall()])
+    
+    # Remove duplicates and sort
+    return ', '.join(sorted(set(users)))
+
 def print_user_tables(conn, user_id, username):
     """Print well-formatted tables of persons and notes visible to a user."""
     visible_data = fetch_visible_persons_notes(conn, user_id)
@@ -243,7 +322,8 @@ def print_user_tables(conn, user_id, username):
             persons[person_id] = {
                 'ID': person_id,
                 'Name': f"{item['vorname']} {item['nachname']}",
-                'Email': item['email']
+                'Email': item['email'],
+                'Visible For': get_users_with_access(conn, 'person', person_id)
             }
     
     # Extract notes
@@ -251,7 +331,8 @@ def print_user_tables(conn, user_id, username):
         'ID': item['note_id'],
         'Person': f"{item['vorname']} {item['nachname']}",
         'Content': item['content'],
-        'Created By': item['created_by_username']
+        'Created By': item['created_by_username'],
+        'Visible For': get_users_with_access(conn, 'note', item['note_id'])
     } for item in visible_data]
     
     print(f"\n{username}'s Visible Persons:")
