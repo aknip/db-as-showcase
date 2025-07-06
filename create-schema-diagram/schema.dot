@@ -1,0 +1,166 @@
+
+digraph structs {
+
+
+rankdir="LR"
+
+
+node [shape=none]
+
+note [label=<
+            <TABLE BORDER="0" CELLSPACING="0" CELLBORDER="1">
+                <TR>
+                    <TD COLSPAN="2"><B>note</B></TD>
+                </TR>
+            
+                <TR>
+                    <TD PORT="id_to">🔑</TD>
+                    <TD PORT="id_from">id</TD>
+                </TR>
+            
+
+                <TR>
+                    <TD PORT="content_to">&nbsp;</TD>
+                    <TD PORT="content_from">content</TD>
+                </TR>
+            
+
+                <TR>
+                    <TD PORT="created_at_to">&nbsp;</TD>
+                    <TD PORT="created_at_from">created_at</TD>
+                </TR>
+            
+
+                <TR>
+                    <TD PORT="created_by_to">&nbsp;</TD>
+                    <TD PORT="created_by_from">created_by</TD>
+                </TR>
+            
+
+                <TR>
+                    <TD PORT="person_id_to">&nbsp;</TD>
+                    <TD PORT="person_id_from">person_id</TD>
+                </TR>
+            
+            </TABLE>
+        >];
+        
+note_assignment [label=<
+            <TABLE BORDER="0" CELLSPACING="0" CELLBORDER="1">
+                <TR>
+                    <TD COLSPAN="2"><B>note_assignment</B></TD>
+                </TR>
+            
+                <TR>
+                    <TD PORT="note_id_to">🔑</TD>
+                    <TD PORT="note_id_from">note_id</TD>
+                </TR>
+            
+
+                <TR>
+                    <TD PORT="user_id_to">🔑</TD>
+                    <TD PORT="user_id_from">user_id</TD>
+                </TR>
+            
+            </TABLE>
+        >];
+        
+person [label=<
+            <TABLE BORDER="0" CELLSPACING="0" CELLBORDER="1">
+                <TR>
+                    <TD COLSPAN="2"><B>person</B></TD>
+                </TR>
+            
+                <TR>
+                    <TD PORT="id_to">🔑</TD>
+                    <TD PORT="id_from">id</TD>
+                </TR>
+            
+
+                <TR>
+                    <TD PORT="vorname_to">&nbsp;</TD>
+                    <TD PORT="vorname_from">vorname</TD>
+                </TR>
+            
+
+                <TR>
+                    <TD PORT="nachname_to">&nbsp;</TD>
+                    <TD PORT="nachname_from">nachname</TD>
+                </TR>
+            
+
+                <TR>
+                    <TD PORT="email_to">&nbsp;</TD>
+                    <TD PORT="email_from">email</TD>
+                </TR>
+            
+
+                <TR>
+                    <TD PORT="telefon_to">&nbsp;</TD>
+                    <TD PORT="telefon_from">telefon</TD>
+                </TR>
+            
+
+                <TR>
+                    <TD PORT="created_by_to">&nbsp;</TD>
+                    <TD PORT="created_by_from">created_by</TD>
+                </TR>
+            
+            </TABLE>
+        >];
+        
+user [label=<
+            <TABLE BORDER="0" CELLSPACING="0" CELLBORDER="1">
+                <TR>
+                    <TD COLSPAN="2"><B>user</B></TD>
+                </TR>
+            
+                <TR>
+                    <TD PORT="id_to">🔑</TD>
+                    <TD PORT="id_from">id</TD>
+                </TR>
+            
+
+                <TR>
+                    <TD PORT="username_to">&nbsp;</TD>
+                    <TD PORT="username_from">username</TD>
+                </TR>
+            
+
+                <TR>
+                    <TD PORT="role_to">&nbsp;</TD>
+                    <TD PORT="role_from">role</TD>
+                </TR>
+            
+            </TABLE>
+        >];
+        
+user_person [label=<
+            <TABLE BORDER="0" CELLSPACING="0" CELLBORDER="1">
+                <TR>
+                    <TD COLSPAN="2"><B>user_person</B></TD>
+                </TR>
+            
+                <TR>
+                    <TD PORT="user_id_to">🔑</TD>
+                    <TD PORT="user_id_from">user_id</TD>
+                </TR>
+            
+
+                <TR>
+                    <TD PORT="person_id_to">🔑</TD>
+                    <TD PORT="person_id_from">person_id</TD>
+                </TR>
+            
+            </TABLE>
+        >];
+        
+note_assignment:user_id_from:e -> user:id_to:w
+note_assignment:note_id_from:e -> note:id_to:w
+user_person:person_id_from:e -> person:id_to:w
+user_person:user_id_from:e -> user:id_to:w
+note:person_id_from:e -> person:id_to:w
+note:created_by_from:e -> user:id_to:w
+person:created_by_from:e -> user:id_to:w
+
+}

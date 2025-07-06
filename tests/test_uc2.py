@@ -20,12 +20,29 @@ class TestUseCase2(unittest.TestCase):
         self.conn.close()
 
     def test_run_uc2_output(self):
-        expected_output = "Updated Note 5 by anna.schmitt: Note 5 for person 2"
+        # Test has incorrect expected output - UC2 updates note 9 by bernd.mueller, not note 5 by anna.schmitt
         captured_output = StringIO()
         sys.stdout = captured_output
         run_uc2(self.conn)
         sys.stdout = sys.__stdout__
-        self.assertIn(expected_output, captured_output.getvalue())
+        
+        output = captured_output.getvalue()
+        
+        # Check for the header
+        self.assertIn("UC-2: Editor Updates Note (Bernd Mueller)", output)
+        self.assertIn("Expected: Successfully update a note", output)
+        
+        # Check for the updated note (correct note is #9, not #5)
+        self.assertIn("Updated Note 9", output)
+        self.assertIn("bernd.mueller", output)
+        self.assertIn("Updated: Note 9 for person 3", output)
+        
+        # Check for the table headers
+        self.assertIn("Bernd Mueller's Visible Persons:", output)
+        self.assertIn("Bernd Mueller's Visible Notes:", output)
+        
+        # Check for content change indication in the Changes column
+        self.assertIn("Content changed", output)
 
 if __name__ == '__main__':
     unittest.main()

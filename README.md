@@ -1,7 +1,9 @@
-# db-as-showcase
+# Use a DB as a showcase - to display user access rights and typical usecases
 
 ## Project Goal
 The goal is to be able to display the five most important use cases in a small, sample database using DB queries. To do this, the five use cases must be defined with sample users and sample data.
+
+You can crate a database schema diagram: See directory "create-schema-diagram".
 
 Database: Personal data, notes. Any number of notes can be attached to individuals.
 
