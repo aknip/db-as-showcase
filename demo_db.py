@@ -125,10 +125,17 @@ def insert_sample_data(conn):
     user_note_assignments = [(user_id, note_id) for user_id in range(1, 4) for note_id in range(1, 21)]
     conn.executemany('INSERT INTO user_note (user_id, note_id) VALUES (?, ?);', user_note_assignments)
 
+def run_uc1(conn):
+    print("Admin Overview:")
+    visible_data = fetch_visible_persons_notes(conn, 1)  # Admin user
+    for entry in visible_data:
+        print(f"Person: {entry['person_name']}, Note: {entry['note_content']}")
+
 def main():
     conn = get_connection()
     create_schema(conn)
     insert_sample_data(conn)
+    run_uc1(conn)
     result = fetch_visible_persons_notes(conn, 1)
     print("Visible persons and notes for user 1:", result)
     result = conn.execute("SELECT 1").fetchall()

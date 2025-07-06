@@ -133,7 +133,7 @@ Add:
 
 No existing tests may fail.
 
-Prompt 05 – Visibility Query
+Prompt 05 – Visibility Query: Completed
 
 Based on the SQL strategy:
 
