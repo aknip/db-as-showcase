@@ -74,6 +74,19 @@ def create_schema(conn):
     );
     ''')
 
+SELECT_VISIBLE_DATA = '''
+SELECT p.id AS person_id, p.name AS person_name, n.id AS note_id, n.content AS note_content
+FROM person p
+JOIN note n ON p.id = n.person_id
+LEFT JOIN user_person up ON p.id = up.person_id
+WHERE up.user_id = ? OR ? = 1
+'''
+
+def fetch_visible_persons_notes(conn, user_id):
+    cursor = conn.execute(SELECT_VISIBLE_DATA, (user_id, user_id))
+    rows = cursor.fetchall()
+    return [dict(person_id=row[0], person_name=row[1], note_id=row[2], note_content=row[3]) for row in rows]
+
 def insert_sample_data(conn):
     # Insert users
     users = [
@@ -116,6 +129,8 @@ def main():
     conn = get_connection()
     create_schema(conn)
     insert_sample_data(conn)
+    result = fetch_visible_persons_notes(conn, 1)
+    print("Visible persons and notes for user 1:", result)
     result = conn.execute("SELECT 1").fetchall()
     print("Test result:", result)
     conn.close()

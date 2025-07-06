@@ -120,7 +120,7 @@ Extend demo_db.py:
 
 All tests must remain green.
 
-Prompt 04 – Role Validation Logic
+Prompt 04 – Role Validation Logic: Completed
 
 Add:
 
