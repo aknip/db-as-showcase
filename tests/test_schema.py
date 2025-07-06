@@ -1,12 +1,14 @@
-import unittest
 import sqlite3
 import sys
+import unittest
 from pathlib import Path
 
 # Ensure the demo_db module can be found
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
-from demo_db import get_connection, create_schema
+from demo_db import get_connection, create_schema  # noqa: E402
+
+
 
 class TestSchema(unittest.TestCase):
     def setUp(self):

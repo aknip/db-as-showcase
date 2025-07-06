@@ -1,18 +1,32 @@
-import unittest
 import sys
+"""Test database connection and basic queries."""
+import unittest
 from pathlib import Path
 
 # Ensure the demo_db module can be found
-sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
+sys.path.insert(0, str(Path(__file__).resolve().parent.parent))  # noqa: E402
 
-from demo_db import get_connection
+from demo_db import get_connection  # noqa: E402
 
-class TestConnection(unittest.TestCase):
-    def test_get_connection(self):
-        conn = get_connection()
-        result = conn.execute("SELECT 1").fetchall()
-        self.assertEqual(result, [(1,)])
+
+class TestDatabaseConnection(unittest.TestCase):
+    """Test database connection and basic queries."""
+
+    def test_connection(self):
+        """Test that a database connection can be established."""
+        conn = get_connection(":memory:")
+        self.assertIsNotNone(conn)
         conn.close()
 
-if __name__ == '__main__':
+    def test_select_one(self):
+        """Test that a basic SELECT query works."""
+        conn = get_connection(":memory:")
+        cursor = conn.cursor()
+        cursor.execute("SELECT 1")
+        result = cursor.fetchone()
+        self.assertEqual(result, (1,))
+        conn.close()
+
+
+if __name__ == "__main__":
     unittest.main()

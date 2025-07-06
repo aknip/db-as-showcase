@@ -1,12 +1,14 @@
-import unittest
 import sys
+import unittest
 from io import StringIO
 from pathlib import Path
 
 # Ensure the demo_db module can be found
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
-from demo_db import get_connection, create_schema, insert_sample_data, run_uc1
+from demo_db import get_connection, create_schema, insert_sample_data, run_uc1  # noqa: E402
+
+
 
 class TestUseCase1(unittest.TestCase):
     def setUp(self):
