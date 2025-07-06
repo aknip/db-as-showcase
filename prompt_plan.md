@@ -81,7 +81,7 @@ I-5 Visibility Query
 Each prompt is self-contained, builds on the previous one, and ends with tests.
 (Marked as plain text so the LLM does not confuse code with prompt.)
 
-Prompt 01 – Project Initialization
+Prompt 01 – Project Initialization: Completed
 
 Task:
 1. Create the file demo_db.py.
@@ -178,4 +178,3 @@ Prompt 09 – Full Test Coverage & README
 3. Run pylint/flake8 (if available) with no errors.
 
 All tests must still pass.
-
