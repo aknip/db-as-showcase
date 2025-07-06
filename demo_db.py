@@ -2,6 +2,10 @@ import sqlite3
 import os
 from enum import Enum
 from tabulate import tabulate
+import textwrap
+
+# Configuration
+MAX_TABLE_WIDTH = 100  # Maximum width for tables in characters
 
 class Role(str, Enum):
     """User roles with different permission levels."""
@@ -231,6 +235,13 @@ def insert_sample_data(conn):
     ''', note_assignments)
 
 
+# Global state to track changes between use cases
+state_tracking = {
+    'persons': {},  # person_id -> {users_with_access}
+    'notes': {},    # note_id -> {content, users_with_access}
+    'current_usecase': 0
+}
+
 def get_users_with_access(conn, entity_type, entity_id):
     """Get a list of usernames who have access to a specific person or note."""
     cursor = conn.cursor()
@@ -308,7 +319,114 @@ def get_users_with_access(conn, entity_type, entity_id):
         users.extend([row['username'] for row in cursor.fetchall()])
     
     # Remove duplicates and sort
-    return ', '.join(sorted(set(users)))
+    return sorted(set(users))
+
+def detect_changes(entity_type, entity_id, current_data):
+    """Detect changes for an entity between use cases."""
+    global state_tracking
+    changes = ""
+    
+    if entity_type == 'person':
+        current_users = set(current_data['Visible For'])
+        
+        if entity_id not in state_tracking['persons']:
+            # New person
+            if state_tracking['current_usecase'] > 1:  # Not the first use case
+                changes = "Newly added person"
+            state_tracking['persons'][entity_id] = current_users
+        else:
+            # Existing person - check for access changes
+            previous_users = state_tracking['persons'][entity_id]
+            new_users = current_users - previous_users
+            if new_users:
+                changes = f"Now visible for: {', '.join(new_users)}"
+            state_tracking['persons'][entity_id] = current_users
+    
+    elif entity_type == 'note':
+        current_users = set(current_data['Visible For'])
+        current_content = current_data['Content']
+        
+        if entity_id not in state_tracking['notes']:
+            # New note
+            if state_tracking['current_usecase'] > 1:  # Not the first use case
+                changes = "Newly added note"
+            state_tracking['notes'][entity_id] = {
+                'content': current_content,
+                'users': current_users
+            }
+        else:
+            # Existing note - check for content or access changes
+            previous_data = state_tracking['notes'][entity_id]
+            previous_content = previous_data['content']
+            previous_users = previous_data['users']
+            
+            content_changed = previous_content != current_content
+            new_users = current_users - previous_users
+            
+            if content_changed and new_users:
+                changes = f"Content changed & now visible for: {', '.join(new_users)}"
+            elif content_changed:
+                changes = f"Content changed from '{previous_content}' to '{current_content}'"
+            elif new_users:
+                changes = f"Now visible for: {', '.join(new_users)}"
+                
+            # Update state
+            state_tracking['notes'][entity_id] = {
+                'content': current_content,
+                'users': current_users
+            }
+    
+    return changes
+
+def format_multiline_cell(value, max_width=20):
+    """Format a cell value to be displayed on multiple lines if needed."""
+    if isinstance(value, list):
+        # For lists (like users with access), put each item on a new line
+        return '\n'.join(value)
+    elif isinstance(value, str):
+        # For long strings, wrap text
+        if len(value) > max_width:
+            return '\n'.join(textwrap.wrap(value, width=max_width))
+    return value
+
+def format_table_data(data, column_widths):
+    """Format table data with appropriate column widths and multiline cells."""
+    formatted_data = []
+    for row in data:
+        formatted_row = {}
+        for key, value in row.items():
+            if key in column_widths:
+                formatted_row[key] = format_multiline_cell(value, column_widths[key])
+            else:
+                formatted_row[key] = value
+        formatted_data.append(formatted_row)
+    return formatted_data
+
+def calculate_column_widths(data, max_total_width=MAX_TABLE_WIDTH):
+    """Calculate optimal column widths based on content and max total width."""
+    # Get all column names
+    columns = set()
+    for row in data:
+        columns.update(row.keys())
+    columns = list(columns)
+    
+    # Calculate initial widths based on column names and content
+    widths = {col: len(col) for col in columns}
+    for row in data:
+        for col, val in row.items():
+            if isinstance(val, str):
+                widths[col] = max(widths[col], min(len(val), 40))  # Cap at 40 chars
+    
+    # Adjust widths to fit within max_total_width
+    total_width = sum(widths.values()) + (3 * len(columns))  # Add spacing between columns
+    if total_width > max_total_width:
+        # Scale down proportionally
+        scale_factor = max_total_width / total_width
+        for col in widths:
+            # Ensure minimum width of 5 for each column
+            widths[col] = max(5, int(widths[col] * scale_factor))
+    
+    return widths
 
 def print_user_tables(conn, user_id, username):
     """Print well-formatted tables of persons and notes visible to a user."""
@@ -319,27 +437,58 @@ def print_user_tables(conn, user_id, username):
     for item in visible_data:
         person_id = item['person_id']
         if person_id not in persons:
-            persons[person_id] = {
+            users_with_access = get_users_with_access(conn, 'person', person_id)
+            person_data = {
                 'ID': person_id,
                 'Name': f"{item['vorname']} {item['nachname']}",
                 'Email': item['email'],
-                'Visible For': get_users_with_access(conn, 'person', person_id)
+                'Visible For': users_with_access  # Keep as list for multiline formatting
             }
+            
+            # Add changes column
+            if state_tracking['current_usecase'] > 0:  # Skip for initial state
+                person_data['Changes'] = detect_changes('person', person_id, {
+                    'Visible For': users_with_access
+                })
+            
+            persons[person_id] = person_data
     
     # Extract notes
-    notes = [{
-        'ID': item['note_id'],
-        'Person': f"{item['vorname']} {item['nachname']}",
-        'Content': item['content'],
-        'Created By': item['created_by_username'],
-        'Visible For': get_users_with_access(conn, 'note', item['note_id'])
-    } for item in visible_data]
+    notes = []
+    for item in visible_data:
+        note_id = item['note_id']
+        users_with_access = get_users_with_access(conn, 'note', note_id)
+        note_data = {
+            'ID': note_id,
+            'Person': f"{item['vorname']} {item['nachname']}",
+            'Content': item['content'],
+            'Created By': item['created_by_username'],
+            'Visible For': users_with_access  # Keep as list for multiline formatting
+        }
+        
+        # Add changes column
+        if state_tracking['current_usecase'] > 0:  # Skip for initial state
+            note_data['Changes'] = detect_changes('note', note_id, {
+                'Content': item['content'],
+                'Visible For': users_with_access
+            })
+        
+        notes.append(note_data)
+    
+    # Format and print persons table
+    persons_list = list(persons.values())
+    person_column_widths = calculate_column_widths(persons_list)
+    formatted_persons = format_table_data(persons_list, person_column_widths)
     
     print(f"\n{username}'s Visible Persons:")
-    print(tabulate(list(persons.values()), headers="keys", tablefmt="grid"))
+    print(tabulate(formatted_persons, headers="keys", tablefmt="grid"))
+    
+    # Format and print notes table
+    note_column_widths = calculate_column_widths(notes)
+    formatted_notes = format_table_data(notes, note_column_widths)
     
     print(f"\n{username}'s Visible Notes:")
-    print(tabulate(notes, headers="keys", tablefmt="grid"))
+    print(tabulate(formatted_notes, headers="keys", tablefmt="grid"))
 
 
 def get_user_id_by_username(conn, username):
@@ -353,6 +502,9 @@ def run_uc1(conn):
     
     Admin should see all persons and notes.
     """
+    global state_tracking
+    state_tracking['current_usecase'] = 1
+    
     print("UC-1: Admin Overview (Anna Schmitt)")
     print("Expected: See all persons and notes")
     
@@ -377,6 +529,9 @@ def run_uc2(conn):
     
     Editor should be able to update a note.
     """
+    global state_tracking
+    state_tracking['current_usecase'] = 2
+    
     print("\nUC-2: Editor Updates Note (Bernd Mueller)")
     print("Expected: Successfully update a note")
     
@@ -404,14 +559,15 @@ def run_uc2(conn):
         old_content = note['content']
         created_by_username = note['username']
         
-        # Update the note
+        # Update the note with modified content
+        new_content = f"Updated: {old_content}"
         cursor.execute(
             'UPDATE note SET content = ? WHERE id = ?',
-            (old_content, note_id)  # Just update with same content for demo
+            (new_content, note_id)
         )
         conn.commit()
         
-        print(f"Updated Note {note_id} by {created_by_username}: {old_content}")
+        print(f"Updated Note {note_id} by {created_by_username}: {new_content}")
     else:
         print("No notes available for the editor to update")
         
@@ -424,6 +580,9 @@ def run_uc3(conn):
     
     Viewer should only see notes assigned to them.
     """
+    global state_tracking
+    state_tracking['current_usecase'] = 3
+    
     print("\nUC-3: Viewer Reads Notes (Clara Schulz)")
     print("Expected: Only see notes assigned to Clara")
     
@@ -448,6 +607,9 @@ def run_uc4(conn):
     
     Editor should be able to create a new note.
     """
+    global state_tracking
+    state_tracking['current_usecase'] = 4
+    
     print("\nUC-4: Editor Creates New Note (Bernd Mueller)")
     print("Expected: Successfully create a new note for Karl Offen")
     
@@ -464,19 +626,12 @@ def run_uc4(conn):
     
     # Create a new note for Karl
     cursor.execute(
-        'INSERT INTO note (content, created_by, person_id) VALUES (?, ?, ?)',
-        ('New note created by Bernd for Karl', editor_id, karl_id)
+        'INSERT INTO note (content, person_id, created_by, created_at) VALUES (?, ?, ?, datetime(\'now\'))',
+        ('New note created by Bernd for Karl', karl_id, editor_id)
     )
     conn.commit()
     
-    # Fetch the new note
-    cursor.execute(
-        'SELECT n.content, p.vorname, p.nachname, u.username FROM note n JOIN person p ON n.person_id = p.id JOIN user u ON n.created_by = u.id WHERE n.content LIKE ?',
-        ('New note created by%',)
-    )
-    new_note = cursor.fetchone()
-    
-    print(f"Added Note by {new_note[3]} for {new_note[1]} {new_note[2]}: {new_note[0]}")
+    print(f"Added Note by bernd.mueller for Karl Offen: New note created by Bernd for Karl")
     
     # Print tables
     print_user_tables(conn, editor_id, "Bernd Mueller")
@@ -487,6 +642,9 @@ def run_uc5(conn):
     
     Admin should be able to assign rights to users.
     """
+    global state_tracking
+    state_tracking['current_usecase'] = 5
+    
     print("\nUC-5: Admin Assigns Rights (Anna Schmitt)")
     print("Expected: Successfully assign Olaf to Bernd")
     
