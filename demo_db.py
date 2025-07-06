@@ -131,11 +131,39 @@ def run_uc1(conn):
     for entry in visible_data:
         print(f"Person: {entry['person_name']}, Note: {entry['note_content']}")
 
+def run_uc2(conn):
+    print("Use Case 2: Update Note")
+    conn.execute("UPDATE note SET content = 'Updated Note Content' WHERE id = 1")
+    updated_note = conn.execute("SELECT content FROM note WHERE id = 1").fetchone()
+    print(f"Updated Note 1: {updated_note[0]}")
+
+def run_uc3(conn):
+    print("Use Case 3: Read-Only")
+    notes = conn.execute("SELECT id, content FROM note").fetchall()
+    for note in notes:
+        print(f"Note {note[0]}: {note[1]}")
+
+def run_uc4(conn):
+    print("Use Case 4: New Note by Editor")
+    conn.execute("INSERT INTO note (content, created_by, person_id) VALUES ('New Note Content', 2, 3)")
+    new_note = conn.execute("SELECT content FROM note WHERE content = 'New Note Content'").fetchone()
+    print(f"Added Note: {new_note[0]}")
+
+def run_uc5(conn):
+    print("Use Case 5: Admin Assigns Rights")
+    conn.execute("INSERT INTO user_person (user_id, person_id) VALUES (2, 5)")
+    assignment = conn.execute("SELECT * FROM user_person WHERE user_id = 2 AND person_id = 5").fetchone()
+    print(f"Assignment: User {assignment[0]} to Person {assignment[1]}")
+
 def main():
     conn = get_connection()
     create_schema(conn)
     insert_sample_data(conn)
     run_uc1(conn)
+    run_uc2(conn)
+    run_uc3(conn)
+    run_uc4(conn)
+    run_uc5(conn)
     result = fetch_visible_persons_notes(conn, 1)
     print("Visible persons and notes for user 1:", result)
     result = conn.execute("SELECT 1").fetchall()

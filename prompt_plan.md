@@ -143,7 +143,7 @@ Based on the SQL strategy:
    * Admin sees 5 persons & 20 notes
    * Viewer clara.schulz sees only 'Lisa Privat' & 2 notes
 
-Prompt 06 – Use Case 1
+Prompt 06 – Use Case 1: Completed
 
 1. Implement run_uc1(conn) – admin overview: print business description + query result.
 2. Update main() so run_uc1() executes after insert_sample_data().
